@@ -85,6 +85,7 @@ configure_package() {
 }
 
 pre_configure_target() {
+  export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/qt6:$CMAKE_PREFIX_PATH
   export PATH="${PKG_BUILD}/.host/bin:${PATH}"
 
   PKG_CMAKE_OPTS_TARGET="-GNinja \
