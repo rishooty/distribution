@@ -7,8 +7,54 @@ PKG_VERSION="6.7.2"
 PKG_LICENSE="GPL"
 PKG_SITE="http://qt-project.org"
 PKG_URL="https://download.qt.io/official_releases/qt/6.7/${PKG_VERSION}/single/qt-everywhere-src-${PKG_VERSION}.tar.xz"
-PKG_DEPENDS_TARGET="toolchain openssl libjpeg-turbo libpng pcre2 sqlite zlib freetype SDL2 libxkbcommon gstreamer gst-plugins-base gst-plugins-good gst-libav ninja"
+PKG_DEPENDS_HOST="ninja:host"
+PKG_DEPENDS_TARGET="toolchain ${PKG_DEPENDS_HOST} openssl libjpeg-turbo libpng pcre2 sqlite zlib freetype SDL2 libxkbcommon gstreamer gst-plugins-base gst-plugins-good gst-libav"
 PKG_LONGDESC="A cross-platform application and UI framework"
+
+configure_host() {
+  mkdir -p ${PKG_BUILD}/.host
+  cd ${PKG_BUILD}/.host
+
+  cmake -GNinja \
+        -DCMAKE_INSTALL_PREFIX=${PKG_BUILD}/.host \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DFEATURE_optimize_full=ON \
+        -DFEATURE_shared=OFF \
+        -DFEATURE_static=ON \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DFEATURE_sql=OFF \
+        -DFEATURE_openssl=OFF \
+        -DFEATURE_sql_sqlite=OFF \
+        -DFEATURE_system_zlib=OFF \
+        -DFEATURE_system_pcre2=OFF \
+        -DFEATURE_icu=OFF \
+        -DFEATURE_glib=OFF \
+        -DFEATURE_cups=OFF \
+        -DFEATURE_fontconfig=OFF \
+        -DFEATURE_vulkan=OFF \
+        -DFEATURE_opengl=OFF \
+        -DFEATURE_egl=OFF \
+        -DFEATURE_gbm=OFF \
+        -DFEATURE_kms=OFF \
+        -DBUILD_qtbase=ON \
+        -DBUILD_qtdeclarative=OFF \
+        -DBUILD_qttools=ON \
+        -DBUILD_qttranslations=OFF \
+        -DBUILD_qtdoc=OFF \
+        -DBUILD_EXAMPLES=OFF \
+        -DBUILD_TESTS=OFF \
+        ..
+}
+
+make_host() {
+  cd ${PKG_BUILD}/.host
+  ninja
+}
+
+makeinstall_host() {
+  cd ${PKG_BUILD}/.host
+  ninja install
+}
 
 configure_package() {
   # Apply project specific patches
@@ -39,6 +85,8 @@ configure_package() {
 }
 
 pre_configure_target() {
+  export PATH="${PKG_BUILD}/.host/bin:${PATH}"
+
   PKG_CMAKE_OPTS_TARGET="-GNinja \
                          -DCMAKE_INSTALL_PREFIX=/usr \
                          -DINSTALL_BINDIR=/usr/bin \
@@ -100,7 +148,9 @@ configure_target() {
   mkdir -p ${PKG_BUILD}/.${TARGET_NAME}
   cd ${PKG_BUILD}/.${TARGET_NAME}
   
-  cmake ${PKG_CMAKE_OPTS_TARGET} ..
+  cmake ${PKG_CMAKE_OPTS_TARGET} \
+        -DQT_HOST_PATH=${PKG_BUILD}/.host \
+        ..
 }
 
 makeinstall_target() {
