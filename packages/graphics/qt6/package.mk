@@ -3,10 +3,10 @@
 # Copyright (C) 2023 JELOS (https://github.com/JustEnoughLinuxOS)
 
 PKG_NAME="qt6"
-PKG_VERSION="6.5.1"
+PKG_VERSION="6.7.2"
 PKG_LICENSE="GPL"
 PKG_SITE="http://qt-project.org"
-PKG_URL="https://download.qt.io/official_releases/qt/6.5/${PKG_VERSION}/single/qt-everywhere-src-${PKG_VERSION}.tar.xz"
+PKG_URL="https://download.qt.io/official_releases/qt/6.7/${PKG_VERSION}/single/qt-everywhere-src-${PKG_VERSION}.tar.xz"
 PKG_DEPENDS_TARGET="toolchain openssl libjpeg-turbo libpng pcre2 sqlite zlib freetype SDL2 libxkbcommon gstreamer gst-plugins-base gst-plugins-good gst-libav ninja"
 PKG_LONGDESC="A cross-platform application and UI framework"
 
@@ -60,10 +60,19 @@ pre_configure_target() {
                          -DFEATURE_glib=OFF \
                          -DFEATURE_cups=OFF \
                          -DFEATURE_fontconfig=ON \
-                         -DFEATURE_vulkan=OFF \
                          -DFEATURE_egl=ON \
                          -DFEATURE_gbm=ON \
-                         -DFEATURE_kms=ON"
+                         -DFEATURE_kms=ON \
+                         -DFEATURE_webengine=OFF \
+                         -DFEATURE_pdf=OFF \
+                         -DFEATURE_qttools=OFF \
+                         -DFEATURE_quick3d=OFF \
+                         -DFEATURE_quicktimeline=OFF \
+                         -DFEATURE_virtualkeyboard=OFF \
+                         -DFEATURE_qtwebengine=OFF \
+                         -DFEATURE_qtpdf=OFF \
+                         -DBUILD_TESTING=OFF \
+                         -DBUILD_EXAMPLES=OFF"
 
   # OpenGL options
   if [ "${OPENGLES_SUPPORT}" = "yes" ]; then
@@ -82,6 +91,8 @@ pre_configure_target() {
   # Vulkan support
   if [ "${VULKAN_SUPPORT}" = "yes" ]; then
     PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_vulkan=ON"
+  else
+    PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_vulkan=OFF"
   fi
 }
 
