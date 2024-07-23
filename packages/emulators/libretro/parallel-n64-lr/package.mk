@@ -2,12 +2,12 @@
 # Copyright (C) 2022-present JELOS (https://github.com/JustEnoughLinuxOS)
 
 PKG_NAME="parallel-n64-lr"
-PKG_VERSION="330fa5efd306ad116c44faf6833a8108ed4144b0"
+PKG_VERSION="3c35d867592e553bf80b8984f98e9eae3b6c4ed9"
 PKG_LICENSE="GPLv2"
-PKG_SITE="https://github.com/libretro/parallel-n64"
+PKG_SITE="https://gitlab.com/parallel-launcher/parallel-n64.git"
 PKG_URL="${PKG_SITE}.git"
 PKG_DEPENDS_TARGET="toolchain core-info"
-PKG_LONGDESC="Optimized/rewritten Nintendo 64 emulator made specifically for Libretro. Originally based on Mupen64 Plus."
+PKG_LONGDESC="A fork of ParallelN64 that adds the GLideN64 graphics plugin and some additional settings and features. Designed to be used with Parallel Launcher."
 PKG_TOOLCHAIN="make"
 PKG_BUILD_FLAGS="-lto"
 
