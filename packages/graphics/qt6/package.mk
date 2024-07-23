@@ -10,18 +10,23 @@ PKG_URL="https://download.qt.io/official_releases/qt/6.7/${PKG_VERSION}/single/q
 PKG_DEPENDS_HOST="ninja:host"
 PKG_DEPENDS_TARGET="toolchain ${PKG_DEPENDS_HOST} openssl libjpeg-turbo libpng pcre2 sqlite zlib freetype SDL2 libxkbcommon gstreamer gst-plugins-base gst-plugins-good gst-libav"
 PKG_LONGDESC="A cross-platform application and UI framework"
+PKG_TOOLCHAIN="manual"
+
+export CMAKE_PREFIX_PATH=${PKG_BUILD}/.host:${CMAKE_PREFIX_PATH}
 
 configure_host() {
   mkdir -p ${PKG_BUILD}/.host
   cd ${PKG_BUILD}/.host
 
   cmake -GNinja \
-        -DCMAKE_INSTALL_PREFIX=${PKG_BUILD}/.host \
+        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
         -DCMAKE_BUILD_TYPE=Release \
         -DFEATURE_optimize_full=ON \
+        -DBUILD_qtbase=ON \
+        -DBUILD_qttools=ON \
+        -DBUILD_SHARED_LIBS=OFF \
         -DFEATURE_shared=OFF \
         -DFEATURE_static=ON \
-        -DBUILD_SHARED_LIBS=OFF \
         -DFEATURE_sql=OFF \
         -DFEATURE_openssl=OFF \
         -DFEATURE_sql_sqlite=OFF \
@@ -36,11 +41,6 @@ configure_host() {
         -DFEATURE_egl=OFF \
         -DFEATURE_gbm=OFF \
         -DFEATURE_kms=OFF \
-        -DBUILD_qtbase=ON \
-        -DBUILD_qtdeclarative=OFF \
-        -DBUILD_qttools=ON \
-        -DBUILD_qttranslations=OFF \
-        -DBUILD_qtdoc=OFF \
         -DBUILD_EXAMPLES=OFF \
         -DBUILD_TESTS=OFF \
         ..
@@ -85,7 +85,6 @@ configure_package() {
 }
 
 pre_configure_target() {
-  export CMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/qt6:$CMAKE_PREFIX_PATH
   export PATH="${PKG_BUILD}/.host/bin:${PATH}"
 
   PKG_CMAKE_OPTS_TARGET="-GNinja \
@@ -150,7 +149,8 @@ configure_target() {
   cd ${PKG_BUILD}/.${TARGET_NAME}
   
   cmake ${PKG_CMAKE_OPTS_TARGET} \
-        -DQT_HOST_PATH=${PKG_BUILD}/.host \
+        -DQT_HOST_PATH=${TOOLCHAIN} \
+        -DQt6HostInfo_DIR=${TOOLCHAIN}/lib/cmake/Qt6HostInfo \
         ..
 }
 
