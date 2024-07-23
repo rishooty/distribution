@@ -20,16 +20,10 @@ if [ "${OPENGLES_SUPPORT}" = yes ]; then
 fi
 
 if [ "${VULKAN_SUPPORT}" = "yes" ]; then
-  PKG_MAKE_OPTS_TARGET+=" HAVE_PARALLEL=1"
+  PKG_MAKE_OPTS_TARGET+=" HAVE_PARALLEL=1 HAVE_PARALLEL_RSP=1"
 fi
 
-case ${DEVICE} in
-  RK3*|S922X)
-    PKG_MAKE_OPTS_TARGET+=" platform=${DEVICE}"
-  ;;
-  AMD64)
-    PKG_MAKE_OPTS_TARGET+=" HAVE_PARALLEL_RSP=1"
-esac
+PKG_MAKE_OPTS_TARGET+=" platform=${DEVICE} WITH_DYNAREC=${ARCH}"
 
 pre_configure_target() {
   if [ "${ARCH}" = "aarch64" ]; then
