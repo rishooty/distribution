@@ -17,16 +17,13 @@ configure_host() {
   cd ${PKG_BUILD}/.host
 
   cmake -GNinja \
-        -DQT_HOST_PATH=/usr/lib/x86_64-linux-gnu/qt6
+        -DQT_HOST_PATH=/usr/lib/x86_64-linux-gnu/qt6 \
         -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
         -DCMAKE_BUILD_TYPE=Release \
-        -DFEATURE_optimize_full=ON \
-        -DBUILD_qtbase=ON \
-        -DBUILD_qttools=ON \
+        -DFEATURE_optimize_size=ON \
         -DBUILD_SHARED_LIBS=OFF \
-        -DFEATURE_shared=OFF \
-        -DFEATURE_static=ON \
         -DFEATURE_sql=OFF \
+        -DFEATURE_system_sqlite=OFF \
         -DFEATURE_openssl=OFF \
         -DFEATURE_sql_sqlite=OFF \
         -DFEATURE_system_zlib=OFF \
@@ -35,13 +32,12 @@ configure_host() {
         -DFEATURE_glib=OFF \
         -DFEATURE_cups=OFF \
         -DFEATURE_fontconfig=OFF \
-        -DFEATURE_vulkan=OFF \
-        -DFEATURE_opengl=OFF \
+        -DINPUT_opengl=no \
         -DFEATURE_egl=OFF \
         -DFEATURE_gbm=OFF \
         -DFEATURE_kms=OFF \
-        -DBUILD_EXAMPLES=OFF \
-        -DBUILD_TESTS=OFF \
+        -DQT_BUILD_TESTS=OFF \
+        -DQT_BUILD_EXAMPLES=OFF \
         ..
 }
 
@@ -51,8 +47,7 @@ make_host() {
 }
 
 makeinstall_host() {
-  cd ${PKG_BUILD}/.host
-  ninja install
+  ninja install DESTDIR=${PKG_BUILD}/.host
 }
 
 configure_package() {
@@ -94,12 +89,11 @@ pre_configure_target() {
                          -DINSTALL_ARCHDATADIR=/usr/lib \
                          -DINSTALL_DOCDIR=/usr/share/doc/qt6 \
                          -DINSTALL_DATADIR=/usr/share \
-                         -DFEATURE_optimize_full=ON \
-                         -DFEATURE_shared=ON \
-                         -DFEATURE_static=OFF \
-                         -DFEATURE_sql_sqlite=OFF \
-                         -DFEATURE_openssl_linked=ON \
+                         -DFEATURE_optimize_size=ON \
+                         -DBUILD_SHARED_LIBS=ON \
+                         -DFEATURE_sql=OFF \
                          -DFEATURE_system_sqlite=OFF \
+                         -DINPUT_openssl=linked \
                          -DFEATURE_system_zlib=ON \
                          -DFEATURE_system_pcre2=ON \
                          -DFEATURE_system_harfbuzz=ON \
@@ -110,22 +104,14 @@ pre_configure_target() {
                          -DFEATURE_egl=ON \
                          -DFEATURE_gbm=ON \
                          -DFEATURE_kms=ON \
-                         -DFEATURE_webengine=OFF \
-                         -DFEATURE_pdf=OFF \
-                         -DFEATURE_qttools=ON \
-                         -DFEATURE_quick3d=OFF \
-                         -DFEATURE_quicktimeline=OFF \
-                         -DFEATURE_virtualkeyboard=OFF \
-                         -DFEATURE_qtwebengine=OFF \
-                         -DFEATURE_qtpdf=OFF \
-                         -DBUILD_TESTING=OFF \
-                         -DBUILD_EXAMPLES=OFF"
+                         -DQT_BUILD_TESTS=OFF \
+                         -DQT_BUILD_EXAMPLES=OFF"
 
   # OpenGL options
   if [ "${OPENGLES_SUPPORT}" = "yes" ]; then
-    PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_opengl_es2=ON"
+    PKG_CMAKE_OPTS_TARGET+=" -DINPUT_opengl=es2"
   else
-    PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_opengl=ON"
+    PKG_CMAKE_OPTS_TARGET+=" -DINPUT_opengl=desktop"
   fi
 
   # Wayland support
