@@ -12,13 +12,12 @@ PKG_DEPENDS_TARGET="toolchain ${PKG_DEPENDS_HOST} openssl libjpeg-turbo libpng p
 PKG_LONGDESC="A cross-platform application and UI framework"
 PKG_TOOLCHAIN="manual"
 
-export CMAKE_PREFIX_PATH=${PKG_BUILD}/.host:${CMAKE_PREFIX_PATH}
-
 configure_host() {
   mkdir -p ${PKG_BUILD}/.host
   cd ${PKG_BUILD}/.host
 
   cmake -GNinja \
+        -DQT_HOST_PATH=/usr/lib/x86_64-linux-gnu/qt6
         -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
         -DCMAKE_BUILD_TYPE=Release \
         -DFEATURE_optimize_full=ON \
@@ -98,12 +97,12 @@ pre_configure_target() {
                          -DFEATURE_optimize_full=ON \
                          -DFEATURE_shared=ON \
                          -DFEATURE_static=OFF \
-                         -DFEATURE_sql_sqlite=ON \
+                         -DFEATURE_sql_sqlite=OFF \
                          -DFEATURE_openssl_linked=ON \
-                         -DFEATURE_system_sqlite=ON \
+                         -DFEATURE_system_sqlite=OFF \
                          -DFEATURE_system_zlib=ON \
                          -DFEATURE_system_pcre2=ON \
-                         -DFEATURE_system_harfbuzz=OFF \
+                         -DFEATURE_system_harfbuzz=ON \
                          -DFEATURE_icu=OFF \
                          -DFEATURE_glib=OFF \
                          -DFEATURE_cups=OFF \
@@ -113,7 +112,7 @@ pre_configure_target() {
                          -DFEATURE_kms=ON \
                          -DFEATURE_webengine=OFF \
                          -DFEATURE_pdf=OFF \
-                         -DFEATURE_qttools=OFF \
+                         -DFEATURE_qttools=ON \
                          -DFEATURE_quick3d=OFF \
                          -DFEATURE_quicktimeline=OFF \
                          -DFEATURE_virtualkeyboard=OFF \
@@ -149,8 +148,6 @@ configure_target() {
   cd ${PKG_BUILD}/.${TARGET_NAME}
   
   cmake ${PKG_CMAKE_OPTS_TARGET} \
-        -DQT_HOST_PATH=${TOOLCHAIN} \
-        -DQt6HostInfo_DIR=${TOOLCHAIN}/lib/cmake/Qt6HostInfo \
         ..
 }
 
