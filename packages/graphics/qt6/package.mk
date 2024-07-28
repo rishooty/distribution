@@ -39,7 +39,7 @@ configure_package() {
   fi
 }
 
-re_configure_target() {
+pre_configure_target() {
   unset CPPFLAGS
   unset CFLAGS
   unset CXXFLAGS
@@ -55,9 +55,7 @@ re_configure_target() {
         -B .host \
         -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
         -DQT_BUILD_TOOLS_WHEN_CROSSCOMPILING=ON \
-        -DQT_HOST_PATH=/usr \
         -DQt6HostInfo_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6HostInfo \
-        -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
         -DFEATURE_vulkan=OFF \
         -DNO_VULKAN=ON \
         -DINPUT_vulkan=no \
