@@ -12,44 +12,6 @@ PKG_DEPENDS_TARGET="toolchain ${PKG_DEPENDS_HOST} openssl libjpeg-turbo libpng p
 PKG_LONGDESC="A cross-platform application and UI framework"
 PKG_TOOLCHAIN="manual"
 
-configure_host() {
-  mkdir -p ${PKG_BUILD}/.host
-  cd ${PKG_BUILD}/.host
-
-  cmake -GNinja \
-        -DQT_HOST_PATH=/usr/lib/x86_64-linux-gnu/qt6 \
-        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DFEATURE_optimize_size=ON \
-        -DBUILD_SHARED_LIBS=OFF \
-        -DFEATURE_sql=OFF \
-        -DFEATURE_system_sqlite=OFF \
-        -DFEATURE_openssl=OFF \
-        -DFEATURE_sql_sqlite=OFF \
-        -DFEATURE_system_zlib=OFF \
-        -DFEATURE_system_pcre2=OFF \
-        -DFEATURE_icu=OFF \
-        -DFEATURE_glib=OFF \
-        -DFEATURE_cups=OFF \
-        -DFEATURE_fontconfig=OFF \
-        -DINPUT_opengl=no \
-        -DFEATURE_egl=OFF \
-        -DFEATURE_gbm=OFF \
-        -DFEATURE_kms=OFF \
-        -DQT_BUILD_TESTS=OFF \
-        -DQT_BUILD_EXAMPLES=OFF \
-        ..
-}
-
-make_host() {
-  cd ${PKG_BUILD}/.host
-  ninja
-}
-
-makeinstall_host() {
-  ninja install DESTDIR=${PKG_BUILD}/.host
-}
-
 configure_package() {
   # Apply project specific patches
   PKG_PATCH_DIRS="${PROJECT}"
@@ -72,15 +34,44 @@ configure_package() {
   fi
 
   # Vulkan support
-  if [ "${VULKAN_SUPPORT}" = "yes" ]
-  then
+  if [ "${VULKAN_SUPPORT}" = "yes" ]; then
     PKG_DEPENDS_TARGET+=" vulkan-loader vulkan-headers"
   fi
 }
 
-pre_configure_target() {
-  export PATH="${PKG_BUILD}/.host/bin:${PATH}"
+re_configure_target() {
+  unset CPPFLAGS
+  unset CFLAGS
+  unset CXXFLAGS
+  unset LDFLAGS
 
+  # Create host build directory
+  mkdir -p ${PKG_BUILD}/.host
+  cd ${PKG_BUILD}
+
+  # Host build
+  cmake -GNinja \
+        -S . \
+        -B .host \
+        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
+        -DQT_BUILD_TOOLS_WHEN_CROSSCOMPILING=ON \
+        -DQT_HOST_PATH=/usr \
+        -DQt6HostInfo_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6HostInfo \
+        -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+        -DFEATURE_vulkan=OFF \
+        -DNO_VULKAN=ON \
+        -DINPUT_vulkan=no \
+        -DFEATURE_vkgen=OFF \
+        -DFEATURE_vkkhrdisplay=OFF
+
+  # Build host tools
+  cmake --build .host
+  cmake --install .host
+
+  # Ensure the host tools are in the PATH
+  export PATH="${PKG_BUILD}/.host/bin:${TOOLCHAIN}/bin:${PATH}"
+
+  # Rest of your pre_configure_target function...
   PKG_CMAKE_OPTS_TARGET="-GNinja \
                          -DCMAKE_INSTALL_PREFIX=/usr \
                          -DINSTALL_BINDIR=/usr/bin \
@@ -105,7 +96,9 @@ pre_configure_target() {
                          -DFEATURE_gbm=ON \
                          -DFEATURE_kms=ON \
                          -DQT_BUILD_TESTS=OFF \
-                         -DQT_BUILD_EXAMPLES=OFF"
+                         -DQT_BUILD_EXAMPLES=OFF \
+                         -DQT_HOST_PATH=${PKG_BUILD}/.host \
+                         -DQt6HostInfo_DIR=${PKG_BUILD}/.host/lib/cmake/Qt6HostInfo"
 
   # OpenGL options
   if [ "${OPENGLES_SUPPORT}" = "yes" ]; then
@@ -125,33 +118,55 @@ pre_configure_target() {
   if [ "${VULKAN_SUPPORT}" = "yes" ]; then
     PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_vulkan=ON"
   else
-    PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_vulkan=OFF"
+    PKG_CMAKE_OPTS_TARGET+=" -DFEATURE_vulkan=OFF -DNO_VULKAN=ON -DINPUT_vulkan=no -DFEATURE_vkgen=OFF -DFEATURE_vkkhrdisplay=OFF"
   fi
+
+  # Create CMake toolchain file
+  cat > ${CMAKE_CONF} << EOF
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR ${TARGET_ARCH})
+set(CMAKE_C_COMPILER ${CC})
+set(CMAKE_CXX_COMPILER ${CXX})
+set(CMAKE_SYSROOT ${SYSROOT_PREFIX})
+set(CMAKE_FIND_ROOT_PATH ${SYSROOT_PREFIX})
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+EOF
+
+  export PATH="${TOOLCHAIN}/bin:${PATH}"
 }
 
 configure_target() {
   mkdir -p ${PKG_BUILD}/.${TARGET_NAME}
-  cd ${PKG_BUILD}/.${TARGET_NAME}
+  cd ${PKG_BUILD}
   
-  cmake ${PKG_CMAKE_OPTS_TARGET} \
-        ..
+  cmake -S . -B .${TARGET_NAME} ${PKG_CMAKE_OPTS_TARGET} \
+        -DQT_HOST_PATH=${PKG_BUILD}/.host \
+        -DQt6HostInfo_DIR=${PKG_BUILD}/.host/lib/cmake/Qt6HostInfo \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+        -DCMAKE_C_COMPILER=${CC} \
+        -DCMAKE_CXX_COMPILER=${CXX}
+}
+
+make_target() {
+  ninja
 }
 
 makeinstall_target() {
-  ninja install DESTDIR=${INSTALL}
+  DESTDIR=${SYSROOT_PREFIX} ninja install
 }
 
 post_makeinstall_target() {
   # Remove references to the build directory from installed library dependencies
-  find ${INSTALL}/usr/lib/ -name \*.prl -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+  find ${SYSROOT_PREFIX}/usr/lib/ -name \*.prl -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
 
   # Create directories
   mkdir -p ${INSTALL}/usr/lib
   mkdir -p ${INSTALL}/usr/plugins
   mkdir -p ${INSTALL}/usr/qml
-
-  # Sysroot path to Qt6 files
-  PKG_QT6_SYSROOT_PATH=${PKG_ORIG_SYSROOT_PREFIX:-${SYSROOT_PREFIX}}/usr
 
   # Install Qt6 libs
   for PKG_QT6_LIBS in \
@@ -159,45 +174,45 @@ post_makeinstall_target() {
     libQt6Qml libQt6QmlModels libQt6Quick libQt6QuickControls2 libQt6QuickTemplates2 \
     libQt6Sql libQt6Svg libQt6Test libQt6Widgets libQt6Xml
   do
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/lib/${PKG_QT6_LIBS}.so* ${INSTALL}/usr/lib
+    cp -PR ${SYSROOT_PREFIX}/usr/lib/${PKG_QT6_LIBS}.so* ${INSTALL}/usr/lib
   done
 
   # Install Qt6 plugins
   for PKG_QT6_PLUGINS in \
     imageformats platforms sqldrivers
   do
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/${PKG_QT6_PLUGINS} ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/${PKG_QT6_PLUGINS} ${INSTALL}/usr/plugins
   done
 
   # Install Qt6 QML
   for PKG_QT6_QML in \
     Qt QtQml QtQuick QtQuick3D QtTest
   do
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/qml/${PKG_QT6_QML} ${INSTALL}/usr/qml
+    cp -PR ${SYSROOT_PREFIX}/usr/qml/${PKG_QT6_QML} ${INSTALL}/usr/qml
   done
 
   # Install libs, plugins & qml for Wayland/X11 display server
   if [ ${DISPLAYSERVER} = "x11" ]; then
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/lib/libQt6XcbQpa.so*      ${INSTALL}/usr/lib
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/xcbglintegrations ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/lib/libQt6XcbQpa.so*      ${INSTALL}/usr/lib
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/xcbglintegrations ${INSTALL}/usr/plugins
   elif [ ${DISPLAYSERVER} = "wl" ]; then
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/lib/libQt6WaylandClient.so*     ${INSTALL}/usr/lib
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/lib/libQt6WaylandCompositor.so* ${INSTALL}/usr/lib
+    cp -PR ${SYSROOT_PREFIX}/usr/lib/libQt6WaylandClient.so*     ${INSTALL}/usr/lib
+    cp -PR ${SYSROOT_PREFIX}/usr/lib/libQt6WaylandCompositor.so* ${INSTALL}/usr/lib
 
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/platforms/libqwayland*              ${INSTALL}/usr/plugins/platforms
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/wayland-decoration-client           ${INSTALL}/usr/plugins
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/wayland-graphics-integration-client ${INSTALL}/usr/plugins
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/wayland-graphics-integration-server ${INSTALL}/usr/plugins
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/wayland-shell-integration           ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/platforms/libqwayland*              ${INSTALL}/usr/plugins/platforms
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/wayland-decoration-client           ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/wayland-graphics-integration-client ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/wayland-graphics-integration-server ${INSTALL}/usr/plugins
+    cp -PR ${SYSROOT_PREFIX}/usr/plugins/wayland-shell-integration           ${INSTALL}/usr/plugins
 
-    cp -PR ${PKG_QT6_SYSROOT_PATH}/qml/QtWayland ${INSTALL}/usr/qml
+    cp -PR ${SYSROOT_PREFIX}/usr/qml/QtWayland ${INSTALL}/usr/qml
   fi
 
   # Install EGLFS libs & plugins if OpenGLES is supported
   if [ "${OPENGLES_SUPPORT}" = "yes" ]; then
     if [ ${DISPLAYSERVER} = "no" ]; then
-      cp -PR ${PKG_QT6_SYSROOT_PATH}/lib/libQt6EglFSDeviceIntegration.so* ${INSTALL}/usr/lib
-      cp -PR ${PKG_QT6_SYSROOT_PATH}/plugins/egldeviceintegrations        ${INSTALL}/usr/plugins
+      cp -PR ${SYSROOT_PREFIX}/usr/lib/libQt6EglFSDeviceIntegration.so* ${INSTALL}/usr/lib
+      cp -PR ${SYSROOT_PREFIX}/usr/plugins/egldeviceintegrations        ${INSTALL}/usr/plugins
     fi
   fi
 }
