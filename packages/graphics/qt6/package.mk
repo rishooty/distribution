@@ -3,14 +3,17 @@
 # Copyright (C) 2023 JELOS (https://github.com/JustEnoughLinuxOS)
 
 PKG_NAME="qt6"
-PKG_VERSION="6.7.2"
+PKG_VERSION="8a875b0dcb6b7b9405f0a39d481a73cbcde19b8a"
 PKG_LICENSE="GPL"
 PKG_SITE="http://qt-project.org"
-PKG_URL="https://download.qt.io/official_releases/qt/6.7/${PKG_VERSION}/single/qt-everywhere-src-${PKG_VERSION}.tar.xz"
+PKG_URL="https://invent.kde.org/qt/qt/qt5.git"
 PKG_DEPENDS_HOST="ninja:host"
 PKG_DEPENDS_TARGET="toolchain ${PKG_DEPENDS_HOST} openssl libjpeg-turbo libpng pcre2 sqlite zlib freetype SDL2 libxkbcommon gstreamer gst-plugins-base gst-plugins-good gst-libav"
 PKG_LONGDESC="A cross-platform application and UI framework"
-PKG_TOOLCHAIN="manual"
+PKG_TOOLCHAIN="cmake"
+GET_HANDLER_SUPPORT="git"
+PKG_GIT_CLONE_BRANCH="6.2.4"
+PKG_GIT_CLONE_SINGLE="yes"
 
 configure_package() {
   # Apply project specific patches
@@ -40,63 +43,39 @@ configure_package() {
 }
 
 pre_configure_target() {
-  unset CPPFLAGS
-  unset CFLAGS
-  unset CXXFLAGS
-  unset LDFLAGS
-
-  # Create host build directory
-  mkdir -p ${PKG_BUILD}/.host
-  cd ${PKG_BUILD}
-
-  # Host build
-  cmake -GNinja \
-        -S . \
-        -B .host \
-        -DCMAKE_INSTALL_PREFIX=${TOOLCHAIN} \
-        -DQT_BUILD_TOOLS_WHEN_CROSSCOMPILING=ON \
-        -DQt6HostInfo_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6HostInfo \
-        -DFEATURE_vulkan=OFF \
-        -DNO_VULKAN=ON \
-        -DINPUT_vulkan=no \
-        -DFEATURE_vkgen=OFF \
-        -DFEATURE_vkkhrdisplay=OFF
-
-  # Build host tools
-  cmake --build .host
-  cmake --install .host
-
-  # Ensure the host tools are in the PATH
-  export PATH="${PKG_BUILD}/.host/bin:${TOOLCHAIN}/bin:${PATH}"
-
-  # Rest of your pre_configure_target function...
-  PKG_CMAKE_OPTS_TARGET="-GNinja \
-                         -DCMAKE_INSTALL_PREFIX=/usr \
-                         -DINSTALL_BINDIR=/usr/bin \
-                         -DINSTALL_LIBDIR=/usr/lib \
-                         -DINSTALL_INCLUDEDIR=/usr/include \
-                         -DINSTALL_ARCHDATADIR=/usr/lib \
-                         -DINSTALL_DOCDIR=/usr/share/doc/qt6 \
-                         -DINSTALL_DATADIR=/usr/share \
-                         -DFEATURE_optimize_size=ON \
-                         -DBUILD_SHARED_LIBS=ON \
-                         -DFEATURE_sql=OFF \
-                         -DFEATURE_system_sqlite=OFF \
-                         -DINPUT_openssl=linked \
-                         -DFEATURE_system_zlib=ON \
-                         -DFEATURE_system_pcre2=ON \
-                         -DFEATURE_system_harfbuzz=ON \
-                         -DFEATURE_icu=OFF \
-                         -DFEATURE_glib=OFF \
-                         -DFEATURE_cups=OFF \
-                         -DFEATURE_fontconfig=ON \
-                         -DFEATURE_egl=ON \
-                         -DFEATURE_gbm=ON \
-                         -DFEATURE_kms=ON \
-                         -DQT_BUILD_TESTS=OFF \
-                         -DQT_BUILD_EXAMPLES=OFF \
-                         -DQT_HOST_PATH=${PKG_BUILD}/.host \
-                         -DQt6HostInfo_DIR=${PKG_BUILD}/.host/lib/cmake/Qt6HostInfo"
+PKG_CMAKE_OPTS_TARGET="-GNinja \
+                       -DQT_ALLOW_SYMLINK_IN_PATHS=ON \
+                       -DCMAKE_INSTALL_PREFIX=/usr \
+                       -DINSTALL_BINDIR=/usr/bin \
+                       -DINSTALL_LIBDIR=/usr/lib \
+                       -DINSTALL_INCLUDEDIR=/usr/include \
+                       -DINSTALL_ARCHDATADIR=/usr/lib \
+                       -DINSTALL_DOCDIR=/usr/share/doc/qt6 \
+                       -DINSTALL_DATADIR=/usr/share \
+                       -DFEATURE_optimize_size=ON \
+                       -DBUILD_SHARED_LIBS=ON \
+                       -DFEATURE_sql=OFF \
+                       -DFEATURE_system_sqlite=OFF \
+                       -DINPUT_openssl=linked \
+                       -DFEATURE_system_zlib=ON \
+                       -DFEATURE_system_pcre2=ON \
+                       -DFEATURE_system_harfbuzz=ON \
+                       -DFEATURE_icu=OFF \
+                       -DFEATURE_glib=OFF \
+                       -DFEATURE_cups=OFF \
+                       -DFEATURE_fontconfig=ON \
+                       -DFEATURE_egl=ON \
+                       -DFEATURE_gbm=ON \
+                       -DFEATURE_kms=ON \
+                       -DQT_BUILD_TESTS=OFF \
+                       -DQT_BUILD_EXAMPLES=OFF \
+                       -DQT_HOST_PATH=/usr/lib/x86_64-linux-gnu/qt6 \
+                       -DQt6HostInfo_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6HostInfo \
+                       -DQt6CoreTools_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6CoreTools \
+                       -DQt6_DIR=/usr/lib/x86_64-linux-gnu/cmake/Qt6 \
+                       -DCMAKE_PREFIX_PATH=/usr/lib/x86_64-linux-gnu/cmake \
+                       -DQT_FORCE_BUILD_TOOLS=ON \
+                       -DCMAKE_TOOLCHAIN_FILE=${CMAKE_CONF}"
 
   # OpenGL options
   if [ "${OPENGLES_SUPPORT}" = "yes" ]; then
@@ -132,29 +111,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 EOF
-
-  export PATH="${TOOLCHAIN}/bin:${PATH}"
-}
-
-configure_target() {
-  mkdir -p ${PKG_BUILD}/.${TARGET_NAME}
-  cd ${PKG_BUILD}
-  
-  cmake -S . -B .${TARGET_NAME} ${PKG_CMAKE_OPTS_TARGET} \
-        -DQT_HOST_PATH=${PKG_BUILD}/.host \
-        -DQt6HostInfo_DIR=${PKG_BUILD}/.host/lib/cmake/Qt6HostInfo \
-        -DCMAKE_SYSTEM_NAME=Linux \
-        -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-        -DCMAKE_C_COMPILER=${CC} \
-        -DCMAKE_CXX_COMPILER=${CXX}
-}
-
-make_target() {
-  ninja
-}
-
-makeinstall_target() {
-  DESTDIR=${SYSROOT_PREFIX} ninja install
 }
 
 post_makeinstall_target() {
