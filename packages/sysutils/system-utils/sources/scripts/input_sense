@@ -121,7 +121,7 @@ RELEASE='value 0'
 ### Function buttons should be defined as not pressed for later matching.
 FN_A_PRESSED=false
 FN_B_PRESSED=false
-FN_A_PRESS_TIME=0
+FN_A_PRESS_DURATION=0
 
 ### Allow actions to be overriden in system.cfg
 FN_A_ACTION_UP="$(get_setting key.function.a.up)"
@@ -334,20 +334,9 @@ mkcontroller 2>/dev/null || :
       FN_A_PRESS_TIME=$(date +%s)
     elif [[ "${line}" =~ ${RELEASE} ]]; then
       ${DEBUG} && log $0 "${FUNCTION_MODIFIER_A_EVENT}: Released"
-      CURRENT_TIME=$(date +%s)
-      PRESS_DURATION=$((CURRENT_TIME - FN_A_PRESS_TIME))
-
-      if [ ${PRESS_DURATION} -ge 4 ]; then
-        ${DEBUG} && log $0 "Function A held for 4 seconds or more"
-        toggle_waybar
-      else
-        ${DEBUG} && log $0 "Function A pressed for less than 4 seconds"
-      fi
-
       FN_A_PRESSED=false
-      FN_A_PRESS_TIME=0
+      FN_A_PRESS_DURATION=0
     fi
-    update_key_guide
     ;;
   ${FUNCTION_MODIFIER_B_EVENT})
     if [[ "${line}" =~ ${PRESS} ]]; then
@@ -432,4 +421,16 @@ mkcontroller 2>/dev/null || :
     fi
     ;;
   esac
+
+  if [ "$FN_A_PRESSED" = true ]; then
+    CURRENT_TIME=$(date +%s)
+    FN_A_PRESS_DURATION=$((CURRENT_TIME - FN_A_PRESS_TIME))
+    
+    if [ $FN_A_PRESS_DURATION -ge 4 ] && [ $FN_A_PRESS_DURATION -lt 5 ]; then
+      ${DEBUG} && log $0 "Function A held for 4 seconds"
+      toggle_waybar
+    fi
+  fi
+  
+  update_key_guide
 done
