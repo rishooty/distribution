@@ -224,18 +224,20 @@ toggle_waybar() {
     return 1
   fi
 
-  current_state=$(echo "$bar_config" | jq -r '.mode // "overlay"')
+  current_state=$(echo "$bar_config" | jq -r '.mode // "invisible"')
   ${DEBUG} && log $0 "Current state: $current_state"
 
-  if [ "$current_state" = "overlay" ]; then
-    new_state="invisible"
-  else
+  # Toggle the state regardless of the current state
+  if [ "$current_state" = "invisible" ]; then
     new_state="overlay"
+  else
+    new_state="invisible"
   fi
 
   swaymsg bar mode $new_state
   ${DEBUG} && log $0 "Toggled waybar to $new_state"
 }
+
 
 update_key_guide() {
   source /storage/.config/waybar/hotkeys/current-hotkeys
