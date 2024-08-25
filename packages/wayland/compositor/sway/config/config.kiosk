@@ -13,8 +13,8 @@ for_window [app_id="sonic2013"] fullscreen disable
 for_window [app_id="bgdi"] fullscreen disable
 
 bar {
-    id bar-0
-    position top
-    mode overlay
-    swaybar_command waybar
+  mode overlay
+  hidden_state hide
+  modifier Mod4
+  swaybar_command waybar
 }

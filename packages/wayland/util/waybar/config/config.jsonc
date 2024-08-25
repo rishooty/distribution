@@ -1,8 +1,8 @@
 {
-    "layer": "overlay",
-    "position": "top",
+    "layer": "top",
+    "position": "top", 
     "exclusive": false,
-    "start_hidden": false,
+    "start_hidden": true,
     "ipc": true,
     "modules-left": [
         "custom/key_guide"

@@ -1,0 +1,78 @@
+diff --color -rupN Waybar-0.10.4.orig/include/modules/sway/bar.hpp Waybar-0.10.4/include/modules/sway/bar.hpp
+--- Waybar-0.10.4.orig/include/modules/sway/bar.hpp	2024-07-17 17:04:05.000000000 -0400
++++ Waybar-0.10.4/include/modules/sway/bar.hpp	2024-08-25 15:33:38.802620411 -0400
+@@ -49,6 +49,7 @@ class BarIpcClient {
+   bool visible_by_modifier_ = false;
+   bool visible_by_urgency_ = false;
+   std::atomic<bool> modifier_no_action_ = false;
++  std::string saved_bar_mode_;
+ 
+   SafeSignal<bool> signal_mode_;
+   SafeSignal<bool> signal_visible_;
+diff --color -rupN Waybar-0.10.4.orig/include/modules/sway/ipc/client.hpp Waybar-0.10.4/include/modules/sway/ipc/client.hpp
+--- Waybar-0.10.4.orig/include/modules/sway/ipc/client.hpp	2024-07-17 17:04:05.000000000 -0400
++++ Waybar-0.10.4/include/modules/sway/ipc/client.hpp	2024-08-25 15:32:59.942919820 -0400
+@@ -38,6 +38,7 @@ class Ipc {
+  protected:
+   static inline const std::string ipc_magic_ = "i3-ipc";
+   static inline const size_t ipc_header_size_ = ipc_magic_.size() + 8;
++  static constexpr uint32_t IPC_EVENT_FULLSCREEN_MODE = 5;
+ 
+   const std::string getSocketPath() const;
+   int open(const std::string &) const;
+diff --color -rupN Waybar-0.10.4.orig/src/modules/sway/bar.cpp Waybar-0.10.4/src/modules/sway/bar.cpp
+--- Waybar-0.10.4.orig/src/modules/sway/bar.cpp	2024-07-17 17:04:05.000000000 -0400
++++ Waybar-0.10.4/src/modules/sway/bar.cpp	2024-08-25 15:27:54.471396688 -0400
+@@ -20,6 +20,7 @@ BarIpcClient::BarIpcClient(waybar::Bar&
+   }
+ 
+   Json::Value subscribe_events{Json::arrayValue};
++  subscribe_events.append("fullscreen_mode");
+   subscribe_events.append("bar_state_update");
+   subscribe_events.append("barconfig_update");
+ 
+@@ -101,6 +102,9 @@ void BarIpcClient::onIpcEvent(const stru
+   try {
+     auto payload = parser_.parse(res.payload);
+     switch (res.type) {
++      case IPC_EVENT_FULLSCREEN_MODE:
++        onFullscreenMode(payload);
++        break;
+       case IPC_EVENT_WORKSPACE:
+         if (payload.isMember("change")) {
+           // only check and send signal if the workspace update reason was because of a urgent
+@@ -218,4 +222,25 @@ void BarIpcClient::update() {
+   bar_.setMode(visible ? bar_config_.mode : Bar::MODE_INVISIBLE);
+ }
+ 
++void BarIpcClient::onFullscreenMode(const Json::Value& payload) {
++  std::string fullscreen_mode = payload["change"].asString();
++  if (fullscreen_mode == "1") {
++    // Entering fullscreen
++    saveBarMode();
++    setBarMode("invisible");
++  } else {
++    // Leaving fullscreen
++    restoreBarMode();
++  }
++}
++
++void BarIpcClient::saveBarMode() {
++  saved_bar_mode_ = bar_config_.mode;
++}
++
++void BarIpcClient::restoreBarMode() {
++  bar_config_.mode = saved_bar_mode_;
++  update();
++}
++
+ }  // namespace waybar::modules::sway
+diff --color -rupN Waybar-0.10.4.orig/.vscode/settings.json Waybar-0.10.4/.vscode/settings.json
+--- Waybar-0.10.4.orig/.vscode/settings.json	1969-12-31 19:00:00.000000000 -0500
++++ Waybar-0.10.4/.vscode/settings.json	2024-08-25 15:24:22.323522827 -0400
+@@ -0,0 +1,5 @@
++{
++    "files.associations": {
++        "stdexcept": "cpp"
++    }
++}
