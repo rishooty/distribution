@@ -1,7 +1,17 @@
 diff --color -rupN Waybar-0.10.4.orig/include/modules/sway/bar.hpp Waybar-0.10.4/include/modules/sway/bar.hpp
 --- Waybar-0.10.4.orig/include/modules/sway/bar.hpp	2024-07-17 17:04:05.000000000 -0400
-+++ Waybar-0.10.4/include/modules/sway/bar.hpp	2024-08-25 15:33:38.802620411 -0400
-@@ -49,6 +49,7 @@ class BarIpcClient {
++++ Waybar-0.10.4/include/modules/sway/bar.hpp	2024-08-25 17:36:30.441869602 -0400
+@@ -38,6 +38,9 @@ class BarIpcClient {
+   void onUrgencyUpdate(bool visible_by_urgency);
+   void update();
+   bool isModuleEnabled(std::string name);
++  void onFullscreenMode(const Json::Value& payload);
++  void saveBarMode();
++  void restoreBarMode();
+ 
+   Bar& bar_;
+   util::JsonParser parser_;
+@@ -49,6 +52,7 @@ class BarIpcClient {
    bool visible_by_modifier_ = false;
    bool visible_by_urgency_ = false;
    std::atomic<bool> modifier_no_action_ = false;
@@ -20,9 +30,20 @@ diff --color -rupN Waybar-0.10.4.orig/include/modules/sway/ipc/client.hpp Waybar
  
    const std::string getSocketPath() const;
    int open(const std::string &) const;
+diff --color -rupN Waybar-0.10.4.orig/include/modules/sway/ipc/ipc.hpp Waybar-0.10.4/include/modules/sway/ipc/ipc.hpp
+--- Waybar-0.10.4.orig/include/modules/sway/ipc/ipc.hpp	2024-07-17 17:04:05.000000000 -0400
++++ Waybar-0.10.4/include/modules/sway/ipc/ipc.hpp	2024-08-25 17:35:14.376479994 -0400
+@@ -31,6 +31,7 @@ enum ipc_command_type : uint32_t {
+   IPC_EVENT_BINDING = ((1U << 31) | 5),
+   IPC_EVENT_SHUTDOWN = ((1U << 31) | 6),
+   IPC_EVENT_TICK = ((1U << 31) | 7),
++  IPC_EVENT_FULLSCREEN_MODE = ((1U << 31) | 8),
+ 
+   // sway-specific event types
+   IPC_EVENT_BAR_STATE_UPDATE = ((1U << 31) | 20),
 diff --color -rupN Waybar-0.10.4.orig/src/modules/sway/bar.cpp Waybar-0.10.4/src/modules/sway/bar.cpp
 --- Waybar-0.10.4.orig/src/modules/sway/bar.cpp	2024-07-17 17:04:05.000000000 -0400
-+++ Waybar-0.10.4/src/modules/sway/bar.cpp	2024-08-25 15:27:54.471396688 -0400
++++ Waybar-0.10.4/src/modules/sway/bar.cpp	2024-08-25 17:37:07.433545389 -0400
 @@ -20,6 +20,7 @@ BarIpcClient::BarIpcClient(waybar::Bar&
    }
  
@@ -47,14 +68,15 @@ diff --color -rupN Waybar-0.10.4.orig/src/modules/sway/bar.cpp Waybar-0.10.4/src
  
 +void BarIpcClient::onFullscreenMode(const Json::Value& payload) {
 +  std::string fullscreen_mode = payload["change"].asString();
-+  if (fullscreen_mode == "1") {
++  if (fullscreen_mode == "enter") {
 +    // Entering fullscreen
 +    saveBarMode();
-+    setBarMode("invisible");
-+  } else {
++    bar_config_.mode = "invisible";
++  } else if (fullscreen_mode == "leave") {
 +    // Leaving fullscreen
 +    restoreBarMode();
 +  }
++  update();
 +}
 +
 +void BarIpcClient::saveBarMode() {
@@ -63,7 +85,6 @@ diff --color -rupN Waybar-0.10.4.orig/src/modules/sway/bar.cpp Waybar-0.10.4/src
 +
 +void BarIpcClient::restoreBarMode() {
 +  bar_config_.mode = saved_bar_mode_;
-+  update();
 +}
 +
  }  // namespace waybar::modules::sway
