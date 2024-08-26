@@ -264,7 +264,7 @@ update_key_guide() {
   fi
 }
 
-update_key_guide
+# update_key_guide
 
 ### Search the system for useful devices to monitor for inputs.
 get_devices() {
@@ -339,7 +339,7 @@ mkcontroller 2>/dev/null || :
 
       if [ ${PRESS_DURATION} -ge 4 ]; then
         ${DEBUG} && log $0 "Function A held for 4 seconds or more"
-        toggle_waybar
+        # toggle_waybar
       else
         ${DEBUG} && log $0 "Function A pressed for less than 4 seconds"
       fi
@@ -347,7 +347,7 @@ mkcontroller 2>/dev/null || :
       FN_A_PRESSED=false
       FN_A_PRESS_TIME=0
     fi
-    update_key_guide
+    # update_key_guide
     ;;
   ${FUNCTION_MODIFIER_B_EVENT})
     if [[ "${line}" =~ ${PRESS} ]]; then
@@ -357,7 +357,7 @@ mkcontroller 2>/dev/null || :
       ${DEBUG} && log $0 "${FUNCTION_MODIFIER_B_EVENT}: Released"
       FN_B_PRESSED=false
     fi
-    update_key_guide
+    # update_key_guide
     ;;
   ${FUNCTION_VOLUME_UP_EVENT})
     execute_action up

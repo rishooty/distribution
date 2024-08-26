@@ -8,7 +8,7 @@ PKG_LICENSE="MIT"
 PKG_SITE="https://swaywm.org/"
 #PKG_URL="https://github.com/swaywm/sway/releases/download/${PKG_VERSION}/sway-${PKG_VERSION}.tar.gz"
 PKG_URL="https://github.com/swaywm/sway/archive/${PKG_VERSION}.zip" # temporary until 1.10 is released
-PKG_DEPENDS_TARGET="toolchain wayland wayland-protocols libdrm libxkbcommon libinput cairo pango libjpeg-turbo dbus json-c wlroots gdk-pixbuf swaybg foot bemenu xcb-util-wm xwayland xkbcomp"
+PKG_DEPENDS_TARGET="toolchain wayland wayland-protocols libdrm libxkbcommon libinput cairo pango libjpeg-turbo dbus json-c wlroots gdk-pixbuf swaybg foot bemenu xcb-util-wm xwayland xkbcomp i3status"
 PKG_LONGDESC="i3-compatible Wayland compositor"
 PKG_TOOLCHAIN="meson"
 
